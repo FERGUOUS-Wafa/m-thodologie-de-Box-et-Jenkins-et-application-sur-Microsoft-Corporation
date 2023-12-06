@@ -30,3 +30,54 @@ Le projet présentera les résultats de l'application de la méthodologie de Box
 * Les prédictions des futures valeurs du cours de l'action MSFT.
 * Les mesures d'erreur de la prévision.
 * Une discussion sur les résultats et l'interprétation des prédictions.
+
+  ## Instructions
+
+```R
+library(diftrain)
+library(diftrain)
+
+data <- read.csv("MSFT.csv")
+head(data)
+
+msft <- ts(data[, 2], frequency = 1)
+plot.ts(msft, main = "Prix de clôture de Microsoft", ylab = "Prix de clôture", xlab = "Jours")
+
+msft.train <- window(msft, end = 1132)
+msft.test <- window(msft, start = 1132)
+
+plot(msft, main = "MSFT 1992-2018", ylab = "Prix de clôture", xlab = "Jours")
+lines(msft.train, col = "blue")
+lines(msft.test, col = "green")
+legend("bottomright", col = c("blue", "green"), lty = 1, legend = c("Entraînement", "Test"))
+
+adf.test(msft.train, alternative = "stationary")
+
+diftrain <- diff(msft.train)
+plot(diftrain)
+adf.test(diftrain, alternative = "stationary")
+
+acf(diftrain)
+pacf(diftrain)
+
+model1 <- Arima(msft.train, order = c(0, 1, 1), include.constant = TRUE)
+summary(model1)
+
+model2 <- Arima(msft.train, order = c(0, 1, 4), include.constant = TRUE)
+summary(model2)
+
+# Vérification de l'autocorrélation des erreurs
+# Si les pics significatifs sont absents, cela confirme que les modèles sont significatifs
+# Hypothèse du bruit blanc résiduel validée par le test de Ljung-Box
+
+forecast_values <- forecast(model2, h = 126)
+plot(forecast_values, main = "Prévision à l'aide d'ARIMA(0, 1, 4)", ylab = "Prix", xlab = "Date")
+lines(msft.test, lty = 3)
+accuracy(forecast_values, msft.test)[2, 1:6]
+
+model3 <- Arima(msft.test, model = model1)$fitted
+plot(msft.train, main = "Prévision à l'aide d'ARIMA(0, 1, 4) en une seule étape sans réestimation", ylab = "Prix", xlab = "Date", ylim = c(min(msft), max(msft)))
+lines(model3, col = "green")
+lines(msft.test, lty = 3)
+legend("bottomright", col = "green", lty = 1, legend = "Prix prévu")
+accuracy(model3, msft.test)[1, 1:5]
